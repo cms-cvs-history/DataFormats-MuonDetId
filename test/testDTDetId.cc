@@ -3,11 +3,11 @@
    test file for DTDetId
 
    \author Stefano ARGIRO
-   \version $Id$
+   \version $Id: testDTDetId.cc,v 1.1 2005/08/02 15:46:33 argiro Exp $
    \date 27 Jul 2005
 */
 
-static const char CVSId[] = "$Id$";
+static const char CVSId[] = "$Id: testDTDetId.cc,v 1.1 2005/08/02 15:46:33 argiro Exp $";
 
 
 #include <iostream>
@@ -42,17 +42,20 @@ void testDTDetId::testOne(){
 	for (unsigned int slayer=DTDetId::minSuperLayerId; 
 	     slayer<=DTDetId::maxSuperLayerId; ++slayer)
 	  for (unsigned int layer=DTDetId::minLayerId; 
-	       layer<=DTDetId::maxLayerId; ++layer){
+	       layer<=DTDetId::maxLayerId; ++layer)
+	    for (unsigned int wire=DTDetId::minWireId; 
+		 wire<=DTDetId::maxWireId; ++wire){
 
-	    DTDetId detid(wheel, station, sector, slayer, layer);
+	      DTDetId detid(wheel, station, sector, slayer, layer, wire);
 
-	    CPPUNIT_ASSERT(detid.wheel() == wheel);
-            CPPUNIT_ASSERT(detid.station() == station);
-            CPPUNIT_ASSERT(detid.sector() == sector);
-            CPPUNIT_ASSERT(detid.superlayer() == slayer);
-            CPPUNIT_ASSERT(detid.layer() == layer);
-	  }
-
+	      CPPUNIT_ASSERT(detid.wheel() == wheel);
+	      CPPUNIT_ASSERT(detid.station() == station);
+	      CPPUNIT_ASSERT(detid.sector() == sector);
+	      CPPUNIT_ASSERT(detid.superlayer() == slayer);
+	      CPPUNIT_ASSERT(detid.layer() == layer);
+	      CPPUNIT_ASSERT(detid.wire() == wire);
+	    }
+	    
 
 
 }
