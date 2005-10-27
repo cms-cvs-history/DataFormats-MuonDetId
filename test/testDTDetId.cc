@@ -3,7 +3,7 @@
    test file for DTDetId
 
    \author Stefano ARGIRO
-   \version $Id: testDTDetId.cc,v 1.2 2005/10/18 17:57:47 namapane Exp $
+   \version $Id: testDTDetId.cc,v 1.3 2005/10/24 15:56:19 namapane Exp $
    \date 27 Jul 2005
 */
 
@@ -19,6 +19,7 @@ class testDTDetId: public CppUnit::TestFixture
 CPPUNIT_TEST_SUITE(testDTDetId);
 CPPUNIT_TEST(testOne);
 CPPUNIT_TEST(testFail);
+CPPUNIT_TEST(testMemberOperators);
 CPPUNIT_TEST_SUITE_END();
 
 public:
@@ -27,6 +28,7 @@ public:
 
   void testOne();
   void testFail();
+  void testMemberOperators();
 };
 
 ///registration of the test so that the runner can find it
@@ -89,4 +91,13 @@ void testDTDetId::testFail(){
   } catch (...) {
     CPPUNIT_ASSERT("Threw wrong kind of exception" == 0);
   }
+}
+
+
+void testDTDetId::testMemberOperators(){
+  DTDetId layer1(2,3,8,1,4);
+  DTDetId layer2=layer1;
+  
+  CPPUNIT_ASSERT(layer2==layer1);
+
 }
