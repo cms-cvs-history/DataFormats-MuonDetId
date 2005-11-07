@@ -3,7 +3,7 @@
    test file for DTDetId
 
    \author Stefano ARGIRO
-   \version $Id: testDTDetId.cc,v 1.3 2005/10/24 15:56:19 namapane Exp $
+   \version $Id: testDTDetId.cc,v 1.4 2005/10/27 14:15:02 namapane Exp $
    \date 27 Jul 2005
 */
 
@@ -95,9 +95,21 @@ void testDTDetId::testFail(){
 
 
 void testDTDetId::testMemberOperators(){
+  // Test equality operator
   DTDetId layer1(2,3,8,1,4);
-  DTDetId layer2=layer1;
-  
+  DTDetId layer2=layer1;  
+
   CPPUNIT_ASSERT(layer2==layer1);
+
+  // Test layerId() method
+  DTDetId wire(2,3,8,1,4,32);
+  DTDetId layer=wire.layerId();
+
+  CPPUNIT_ASSERT(layer.wheel() == 2);
+  CPPUNIT_ASSERT(layer.station() == 3);
+  CPPUNIT_ASSERT(layer.sector() == 8);
+  CPPUNIT_ASSERT(layer.superlayer() == 1);
+  CPPUNIT_ASSERT(layer.layer() == 4);
+  CPPUNIT_ASSERT(layer.wire() == 0);
 
 }
