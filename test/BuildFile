@@ -1,6 +1,6 @@
 <use name=DataFormats/DetId>
 <use name=DataFormats/MuonDetId>
 
-<bin name=testMuonDetId file=testRunner.cc,testDTDetId.cc,testCSCDetId.cc,testRPCDetId.cc>
+<bin name=testMuonDetId file=testRunner.cc,testDTWireId.cc,testDTLayerId.cc,testDTSLId.cc,testDTChamberId.cc,testCSCDetId.cc,testRPCDetId.cc>
   <use name=cppunit>
 </bin>
