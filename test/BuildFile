@@ -4,3 +4,15 @@
 <bin name=testMuonDetId file=testDTDetIds.cc,testCSCDetId.cc,testRPCDetId.cc,testCSCTriggerNumbering.cc,testMuonDetId.cpp>
   <use name=cppunit>
 </bin>
+
+<use name=Geometry/CSCGeometry>
+<use name=Geometry/Records>
+<use name=DataFormats/GeometryVector>
+<use name=FWCore/Framework>
+<use name=FWCore/ParameterSet>
+
+<flags CXXFLAGS="-g">
+
+<library file=CSCDetIdAnalyzer.cc name=CSCDetIdAnalyzer>
+   <flags EDM_PLUGIN=1>
+</library>
