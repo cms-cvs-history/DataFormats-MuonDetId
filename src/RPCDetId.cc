@@ -2,7 +2,7 @@
  * Impl of RPCDetId
  *
  * \author Ilaria Segoni
- * \version $Id: RPCDetId.cc,v 1.21 2007/10/24 14:31:39 fabiocos Exp $
+ * \version $Id: RPCDetId.cc,v 1.23 2009/05/06 22:17:53 mmaggi Exp $
  * \date 02 Aug 2005
  */
 
@@ -115,20 +115,22 @@ RPCDetId::buildfromDB(int region, int ring, int trlayer, int sector,
     if(ring>0) eta_id = 12-trlayer;
     int plane_id = abs(ring);
     int sector_id = sector;
-    // patch to fix phi rotation
-    sector_id--;
-    if (sector_id==0){
-      sector_id=36;
-      if (plane_id > 1 && trlayer == 1 )
-	sector_id=18;
+
+    if (region <0){
+      if (sector_id < 20 ){
+	sector_id = 19+ 1-sector_id;
+      }else{
+	sector_id = 36+20-sector_id;
+      }
     }
+    sector_id-=1;
+
     //
     int copy_id = 1;
     int roll_id = iroll;
     trIndex=(eta_id*10000+plane_id*1000+sector_id*10+copy_id)*10+ roll_id;
   }
   this->buildfromTrIndex(trIndex);
-
 }
 
 void
@@ -164,6 +166,17 @@ RPCDetId::buildfromTrIndex(int trIndex)
   }
   trIndex = trIndex%10000;
   int sector_id = trIndex/100;
+  if (region!=0) {
+    sector_id+=1;
+    if (sector_id==37)sector_id=1;
+  }
+  if (region==-1){
+    if (sector_id < 20 ){
+      sector_id = 19+ 1-sector_id;
+    }else{
+      sector_id = 36+20-sector_id;
+    }
+  }
   trIndex = trIndex%100;
   int copy_id = trIndex/10;
   int sector=(sector_id-1)/3+1;
