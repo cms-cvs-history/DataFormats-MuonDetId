@@ -10,7 +10,9 @@
  * 3. Each strip channel of the CSC system: range 1-217728 (CSCs 2008) 217729-252288 for ME42 <br>
  * 4. Each Buckeye chip (1 for each layer in each CFEB)of the CSC system: range 1-13608 (CSCs 2008) 13609-15768 for ME42 <br>
  * 5. Each Gas Gain Sector (1 for each [CFEB*HV segment] combination in each layer): range 1-45144 (CSCs 2008) 45145-55944 for ME42 <br>
- * 
+ * 6. Extended for unganged ME1a, appended to the standard list: only in the strip list
+ *    252289-273024 (i.e. an extra 2 x 36 x 6 x 48 = 20736 channels)
+ *
  * The chamber and layer may be specified by CSCDetId or labels for endcap, station, ring, chamber, layer.
  * The strip channel is a value 1-80 (or 64: ME13 chambers have only 64 channels.)
  * The chip number is a value 1-30 (or 24: ME13 chambers have only 24 chips.)
@@ -29,6 +31,10 @@
  * +z ME11, ME12, ME13, ME21, ME22, ME31, ME32, ME41, <br>
  * -z ME11, ME12, ME13, ME21, ME22, ME31, ME32, ME41, <br>
  * +z ME42, -z ME42 <br>
+ *
+ * Further it is extended for hypothetical unganged ME1a strip channels.
+ * The strip list then appends
+ * +z ME1a, -z ME1a <br>
  *
  * \warning This uses magic numbers galore!!
  *
@@ -57,10 +63,9 @@ public:
    * Linear index to label each CSC in CSC system.
    * Argument is the CSCDetId of some CSCChamber.
    *
-   * Output is 1-468 (CSCs 2008) 469-540 (ME42)
+   * Output is 1-468 (CSCs 2008) 469-540 (with ME42)
    *
-   * WARNING: Do not input ME1a values (i.e. ring '4'): does not consider ME1a and ME1b to be separate,
-   * No sanity checking on input value: if you supply an ME1a CSCDetId then you'll get nonsense.
+   * WARNING: Considers both ME1a and ME1b to be part of ME11 - the same values result for is=1, ir=1 or 4.
    */
 
    IndexType chamberIndex( const CSCDetId& id ) const {
@@ -73,8 +78,7 @@ public:
    *
    * Output is 1-2808 (CSCs 2008) 2809-3240 (ME42)
    *
-   * WARNING: Do not input ME1a values (i.e. ring '4'): does not consider ME1a and ME1b to be separate,
-   * No sanity checking on input value: if you supply an ME1a CSCDetId then you'll get nonsense.
+   * WARNING: Considers both ME1a and ME1b to be part of ME11 - the same values result for is=1, ir=1 or 4.
    */
 
    IndexType layerIndex( const CSCDetId& id ) const {
@@ -84,17 +88,20 @@ public:
    /** 
     * Starting index for first chamber in ring 'ir' of station 'is' in endcap 'ie',
     * in range 1-468 (CSCs 2008) or 469-540 (ME42).
+    *
+    * WARNING: Considers both ME1a and ME1b to be part of ME11=ME1a+ME1b - the same values result for is=1, ir=1 or 4.
     */
    IndexType startChamberIndexInEndcap(IndexType ie, IndexType is, IndexType ir) const {
-     const IndexType nschin[24] = {1,37,73,    109,127,0, 163,181,0, 217,469,0,
-                                  235,271,307, 343,361,0, 397,415,0, 451,505,0 };
-     return nschin[(ie-1)*12 + (is-1)*3 + ir-1];
-
+     const IndexType nschin[32] = {1,37,73,1,       109,127,0,0, 163,181,0,0, 217,469,0,0,
+                                   235,271,307,235, 343,361,0,0, 397,415,0,0, 451,505,0,0 };
+     return nschin[(ie-1)*16 + (is-1)*4 + ir - 1];
    }
 
    /**
     * Linear index for chamber 'ic' in ring 'ir' of station 'is' in endcap 'ie',
     * in range 1-468 (CSCs 2008) or 469-540 (ME42)
+    *
+    * WARNING: Considers both ME1a and ME1b to be part of ME11 - the same values result for is=1, ir=1 or 4.
     */
    IndexType chamberIndex(IndexType ie, IndexType is, IndexType ir, IndexType ic) const {
      return startChamberIndexInEndcap(ie,is,ir) + ic - 1; // -1 so start index _is_ ic=1
@@ -103,45 +110,46 @@ public:
    /**
     * Linear index for layer 'il' of chamber 'ic' in ring 'ir' of station 'is' in endcap 'ie',
     * in range 1-2808 (CSCs 2008) or 2809-3240 (ME42).
+    *
+    * WARNING: Considers both ME1a and ME1b to be part of ME11 - the same values result for is=1, ir=1 or 4.
     */
    IndexType layerIndex(IndexType ie, IndexType is, IndexType ir, IndexType ic, IndexType il) const {
-    const IndexType layersInChamber = 6;
+     const IndexType layersInChamber = 6;
      return (chamberIndex(ie,is,ir,ic) - 1 ) * layersInChamber + il;
    }
 
   /**
-   * How many rings are there in station is=1, 2, 3, 4 ?
+   * How many (hardware) rings are there in station is=1, 2, 3, 4 ?
    *
-   * BEWARE! Includes ME42 so claims 2 rings in station 4. There is only 1 at CSC installation 2008.
+   * WARNING <BR>
+   * - Includes ME42 so claims 2 rings in station 4.  <BR>
+   * - ME1 has only 3 physical rings (the hardware) not 4 (virtual ring 4 is used offline for ME1a).
    */
    IndexType ringsInStation( IndexType is ) const {
-      const IndexType nrins[5] = {0,3,2,2,2}; // rings per station
-      return nrins[is];
+     const IndexType nrings[5] = {0,3,2,2,2}; // rings per station
+     return nrings[is];
    }
 
   /**
    * How many chambers are there in ring ir of station is?
    *
-   * Works for ME1a (ring 4 of ME1) too.
+   * Works for ME1a (virtual ring 4 of ME1) too.
    */
    IndexType chambersInRingOfStation(IndexType is, IndexType ir) const {
-      IndexType nc = 36; // most rings have 36 chambers
-      if (is >1 && ir<2 ) nc = 18; // but 21, 31, 41 have 18
-      return nc;
+     const IndexType nCinR[16] = {36,36,36,36, 18,36,0,0, 18,36,0,0, 18,36,0,0}; // chambers in ring
+     return nCinR[(is-1)*4 + ir - 1];
    }
 
   /** 
    * Number of strip channels per layer in a chamber in ring ir of station is.
    *
-   * Station label range 1-4, Ring label range 1-3.
-   *
-   * WARNING: ME1a channels are the last 16 of the 80 total in each layer of an ME11 chamber, 
-   * and an input ir=4 is invalid and will give nonsense. <br>
-   * Considers ME42 as standard 80-strip per layer chambers.
+   * Station label range 1-4, Ring label range 1-4.
+   * Works for ME1a input as is=1, ir=4
+   * WARNING: ME1a channels are considered to be unganged i.e. 48 not the standard 16.
    */
    IndexType stripChannelsPerLayer( IndexType is, IndexType ir ) const {
-     const IndexType nSCinC[12] = { 80,80,64, 80,80,0, 80,80,0, 80,80,0 };
-     return nSCinC[(is-1)*3 + ir - 1];
+     const IndexType nSCinC[16] = { 80,80,64,48, 80,80,0,0, 80,80,0,0, 80,80,0,0 };
+     return nSCinC[(is-1)*4 + ir - 1];
    }
 
   /**
@@ -149,26 +157,30 @@ public:
    *
    * Endcap label range 1-2, Station label range 1-4, Ring label range 1-3.
    *
-   * WARNING: ME1a channels are the last 16 of the 80 total in each layer of an ME11 chamber, 
-   * and an input ir=4 is invalid and will give nonsense.
+   * WARNING: ME1a channels are  NOT  considered the last 16 of the 80 total in each layer of an ME11 chamber!
    */
    LongIndexType stripChannelStart( IndexType ie, IndexType is, IndexType ir ) const {
 
-     // These are in the ranges 1-217728 (CSCs 2008) and 217729-252288 (ME42).
-     // There are 1-108884 channels per endcap (CSCs 2008) and 17280 channels per endcap (ME42).
-     // Start of -z channels (CSCs 2008) is 108864 + 1 = 108865
-     // Start of +z (ME42) is 217728 + 1 = 217729
-     // Start of -z (ME42) is 217728 + 1 + 17280 = 235009
-      const LongIndexType nStart[24] = { 1,17281,34561, 48385,57025,0, 74305,82945,0, 100225,217729,0,
-                                   108865,126145,143425, 157249,165889,0, 183169,191809,0, 209089,235009,0 };
-      return  nStart[(ie-1)*12 + (is-1)*3 + ir - 1];
+     // These are in the ranges 1-217728 (CSCs 2008), 217729-252288 (ME42), and 252289-273024 (unganged ME1a)
+     // There are 1-108884 channels per endcap (CSCs 2008), 17280 channels per endcap (ME42), 
+     // and 10368 channels per endcap (unganged ME1a)
+     // Start of -z channels (CSCs 2008) is 108864 + 1    = 108865
+     // Start of +z (ME42) is 217728 + 1                  = 217729
+     // Start of -z (ME42) is 217728 + 1 + 17280          = 235009
+     // Start of +z (unganged ME1a) is 252288 + 1         = 252289
+     // Start of -z (unganged ME1a) is 252288 + 1 + 10368 = 262657
+      const LongIndexType nStart[32] = 
+         {      1, 17281, 34561,252289,   48385, 57025,0,0,   74305, 82945,0,0,  100225,217729,0,0,
+           108865,126145,143425,262657,  157249,165889,0,0,  183169,191809,0,0,  209089,235009,0,0 };
+      return  nStart[(ie-1)*16 + (is-1)*4 + ir - 1];
    }
 
   /**
    * Linear index for strip channel istrip in layer 'il' of chamber 'ic' of ring 'ir'
    * in station 'is' of endcap 'ie'.
    *
-   * Output is 1-217728 (CSCs 2008) or 217729-252288 (ME42).
+   * Output is 1-217728 (CSCs 2008) or 217729-252288 (ME42) or 252289-273024 (unganged ME1a)
+   * WARNING: Supplying ME1a values returns index for unganged ME1a channels, not for channels 65-80 of ME11.
    *
    * WARNING: Use at your own risk! You must input labels within hardware ranges.
    * No trapping on out-of-range values!
@@ -180,7 +192,7 @@ public:
   /**
    * Linear index for strip channel 'istrip' in layer labelled by CSCDetId 'id'.
    *
-   * Output is 1-217728 (CSCs 2008) or 217729-252288 (ME42).
+   * Output is 1-217728 (CSCs 2008) or 217729-252288 (ME42) or 252289-273024 (unganged ME1a)
    *
    * WARNING: Use at your own risk! The supplied CSCDetId must be a layer id.
    * No trapping on out-of-range values!
@@ -195,41 +207,44 @@ public:
    *
    * Station label range 1-4, Ring label range 1-3.
    *
-   * WARNING: ME1a channels are the last 1 of the 5 total in each layer of an ME11 chamber, 
-   * and an input ir=4 is invalid and will give nonsense. <br>
+   * Works for ME1a input as is=1, ir=4
+   * WARNING: ME1a channels are considered to be unganged and have their own 3 chips (ME1b has 4 chips).
+   *
    * Considers ME42 as standard 5 chip per layer chambers.
    */
    IndexType chipsPerLayer( IndexType is, IndexType ir ) const {
-     const IndexType nCinL[12] = { 5,5,4, 5,5,0, 5,5,0, 5,5,0 };
-     return nCinL[(is-1)*3 + ir - 1];
+     const IndexType nCinL[16] = { 4,5,4,3, 5,5,0,0, 5,5,0,0, 5,5,0,0 };
+     return nCinL[(is-1)*4 + ir - 1];
    }
 
   /**
    * Linear index for 1st Buckey chip in ring 'ir' of station 'is' in endcap 'ie'.
    *
    * Endcap label range 1-2, Station label range 1-4, Ring label range 1-3.
-   *
-   * WARNING: ME1a channels are the last 1 of the 5 chips total in each layer of an ME11 chamber, 
-   * and an input ir=4 is invalid and will give nonsense.
+   * 
+   * Works for ME1a input as is=1, ir=4
+   * WARNING: ME1a channels are the last 3 of the 7 chips total in each layer of an ME11 chamber, 
    */
    IndexType chipStart( IndexType ie, IndexType is, IndexType ir ) const {
 
-     // These are in the ranges 1-13608 (CSCs 2008) and 13609-15768 (ME42).
-     // There are 1-6804 chips per endcap (CSCs 2008) and 1080 channels per endcap (ME42).
+     // These are in the ranges 1-13608 (CSCs 2008) and 13609-15768 (ME42) and 15769-17064 (ME1a).
+     // There are 1-6804 chips per endcap (CSCs 2008) and 1080 chips per endcap (ME42) and 648 chips per endcap (ME1a).
      // Start of -z channels (CSCs 2008) is 6804 + 1 = 6805
      // Start of +z (ME42) is 13608 + 1 = 13609
      // Start of -z (ME42) is 13608 + 1 + 1080 = 14689
-     const IndexType nStart[24] = {1, 1081, 2161, 3025, 3565, 0, 4645, 5185, 0, 6265, 13609,0,
-				    6805, 7885, 8965, 9829, 10369,0, 11449, 11989, 0, 13069, 14689 ,0 };
+     // Start of +z (ME1a) is 15768 + 1 = 15769
+     // Start of -z (ME1a) is 15768 + 1 + 648 = 16417
+     const IndexType nStart[32] = {1,   1081, 2161, 15769,  3025, 3565, 0,0, 4645, 5185, 0,0, 6265, 13609,0,0,
+				   6805,7885, 8965, 16417,  9829, 10369,0,0, 11449,11989,0,0, 13069,14689,0,0 };
                                    
-     return  nStart[(ie-1)*12 + (is-1)*3 + ir - 1];
+     return  nStart[(ie-1)*16 + (is-1)*4 + ir - 1];
    }
 
   /**
    * Linear index for Buckeye chip 'ichip' in layer 'il' of chamber 'ic' of ring 'ir'
    * in station 'is' of endcap 'ie'.
    *
-   * Output is 1-13608 (CSCs 2008) or 13609-15768 (ME42).
+   * Output is 1-13608 (CSCs 2008) or 13609-15768 (ME42) or 15769-17064 (ME1a).
    *
    * WARNING: Use at your own risk! You must input labels within hardware ranges.
    * No trapping on out-of-range values!
@@ -243,7 +258,7 @@ public:
   /**
    * Linear index for Buckeye chip 'ichip' in layer labelled by CSCDetId 'id'.
    *
-   * Output is 1-13608 (CSCs 2008) or 13609-15768 (ME42).
+   * Output is 1-13608 (CSCs 2008) or 13609-15768 (ME42) or 15769-17064 (ME1a).
    *
    * WARNING: Use at your own risk! The supplied CSCDetId must be a layer id.
    * No trapping on out-of-range values!
@@ -255,11 +270,12 @@ public:
 
   /**
    * Linear index for Buckeye chip processing strip 'istrip'.
-   *
+   *CSCIndexer.cc
    * Output is 1-5.
    *
    * WARNING: Use at your own risk! The supplied CSCDetId must be a strip id 1-80
-   * ME1/1a strips must be 65-80
+   * ME1/1b strips must be 1-64
+   * ME1/1a strips must be 1-48
    * No trapping on out-of-range values!
    */
 
@@ -270,23 +286,19 @@ public:
   /** 
    * Number of HV segments per layer in a chamber in ring ir of station is.
    *
-   * Station label range 1-4, Ring label range 1-3.
+   * Station label range 1-4, Ring label range 1-4.
    *
-   * WARNING: ME1a channels are the last 1 of the 5 total in each layer of an ME11 chamber, 
-   * and an input ir=4 is invalid and will give nonsense. <br>
+   * WARNING: ME1a (ir=4), ME1b(ir=1) and whole ME11 are all assumed to have the same single HV segment
    */
   IndexType hvSegmentsPerLayer( IndexType is, IndexType ir ) const {
-    const IndexType nSinL[12] = { 1,3,3, 3,5,0, 3,5,0, 3,5,0 };
-    return nSinL[(is-1)*3 + ir - 1];
+    const IndexType nSinL[16] = { 1,3,3,1, 3,5,0,0, 3,5,0,0, 3,5,0,0 };
+    return nSinL[(is-1)*4 + ir - 1];
   }
 
   /** 
    * Number of Gas Gain sectors per layer in a chamber in ring ir of station is.
    *
-   * Station label range 1-4, Ring label range 1-3.
-   *
-   * WARNING: ME1a channels are the last 1 of the 5 total in each layer of an ME11 chamber, 
-   * and an input ir=4 is invalid and will give nonsense. <br>
+   * Station label range 1-4, Ring label range 1-4.
    */
   IndexType sectorsPerLayer( IndexType is, IndexType ir ) const {
     return chipsPerLayer(is,ir)*hvSegmentsPerLayer(is,ir);
@@ -336,11 +348,14 @@ public:
    *
    * Endcap label range 1-2, Station label range 1-4, Ring label range 1-3.
    *
-   * WARNING: ME1a channels are the last 1 of the 5 chips total in each layer of an ME11 chamber, 
-   * and an input ir=4 is invalid and will give nonsense.
+   * WARNING:
+   *   current: ME1a channels are the last 1 of the 5 chips total in each layer of an ME11 chamber, 
+   *            and an input ir=4 is invalid and will give nonsense.
+   *   upgraded: 
    */
   IndexType sectorStart( IndexType ie, IndexType is, IndexType ir ) const {
-    // There are 36 chambers * 6 layers * 5 CFEB's * 1 HV segment = 1080 gas-gain sectors in ME1/1
+    // There are 36 chambers * 6 layers * 5 CFEB's * 1 HV segment = 1080 gas-gain sectors in ME1/1 (non-upgraded)
+    // There are 36 chambers * 6 layers * 3 CFEB's * 1 HV segment = 648 gas-gain sectors in ME1/1a (upgraded)
     // There are 36*6*5*3 = 3240 gas-gain sectors in ME1/2
     // There are 36*6*4*3 = 2592 gas-gain sectors in ME1/3
     // There are 18*6*5*3 = 1620 gas-gain sectors in ME[2-4]/1
@@ -348,21 +363,23 @@ public:
     // Start of -z channels (CSCs 2008) is 22572 + 1 = 22573
     // Start of +z (ME42) is 45144 + 1 = 45145
     // Start of -z (ME42) is 45144 + 1 + 5400 = 50545
-    const IndexType nStart[24] = {1    ,1081 , 4321,   //ME+1/1,ME+1/2,ME+1/3
-				  6913 ,8533 ,    0,   //ME+2/1,ME+2/2,ME+2/3
-				  13933,15553,    0,   //ME+3/1,ME+3/2,ME+3/3
-				  20953,45145,    0,   //ME+4/1,ME+4/2,ME+4/3 (note, ME+4/2 index follows ME-4/1...)
-				  22573,23653,26893,   //ME-1/1,ME-1/2,ME-1/3
-				  29485,31105    ,0,   //ME-2/1,ME-2/2,ME-2/3
-				  36505,38125,    0,   //ME-3/1,ME-3/2,ME-3/3
-				  43525,50545,    0};  //ME-4/1,ME-4/2,ME-4/3 (note, ME-4/2 index follows ME+4/2...)                                   
-    return  nStart[(ie-1)*12 + (is-1)*3 + ir - 1];
+    // Start of +z (ME1a) is 45144 + 1 + 2*5400 = 55945
+    // Start of -z (ME42) is 45144 + 1 + 2*5400 + 648 = 56593
+    const IndexType nStart[32] = {1    , 1081 ,  4321, 55945,  //ME+1/1,ME+1/2,ME+1/3,ME+1/a
+				  6913 , 8533 ,     0,     0,  //ME+2/1,ME+2/2
+				  13933, 15553,     0,     0,  //ME+3/1,ME+3/2
+				  20953, 45145,     0,     0,  //ME+4/1,ME+4/2 (note, ME+4/2 index follows ME-4/1...)
+				  22573, 23653, 26893, 56593,  //ME-1/1,ME-1/2,ME-1/3,ME+1/a
+				  29485, 31105,     0,     0,  //ME-2/1,ME-2/2
+				  36505, 38125,     0,     0,  //ME-3/1,ME-3/2
+				  43525, 50545,     0,     0}; //ME-4/1,ME-4/2 (note, ME-4/2 index follows ME+4/2...)				      
+    return  nStart[(ie-1)*16 + (is-1)*4 + ir - 1];
   }
 
   /**
    * Linear index for Gas gain sector, based on CSCDetId 'id', cathode strip 'istrip' and anode wire 'iwire' 
    *
-   * Output is 1-45144 (CSCs 2008) and 45145-55944 (ME42).
+   * Output is 1-45144 (CSCs 2008) and 45145-55944 (ME42) and 55945-57240 (ME1a)
    *
    * WARNING: Use at your own risk!  You must input labels within hardware ranges (e.g., 'id' must correspond 
    * to a specific layer 1-6). No trapping on out-of-range values!
@@ -375,7 +392,7 @@ public:
    * Linear index for Gas gain sector, based on the cathode strip 'istrip' and anode wire 'iwire' 
    * located in layer 'il' of chamber 'ic' of ring 'ir' in station 'is' of endcap 'ie'.
    *
-   * Output is 1-45144 (CSCs 2008) and 45145-55944 (ME42).
+   * Output is 1-45144 (CSCs 2008) and 45145-55944 (ME42) and 55945-57240 (ME1a)
    *
    * WARNING: Use at your own risk! You must input labels within hardware ranges.
    * No trapping on out-of-range values!
@@ -385,6 +402,7 @@ public:
     IndexType ihvsegment = this->hvSegmentIndex(is,ir,iwire);
     return sectorStart(ie,is,ir)+( (ic-1)*6 + il - 1 )*sectorsPerLayer(is,ir) + (ihvsegment-1)*chipsPerLayer(is,ir) + (ichip-1);
   }
+
 
   /**
    *  Decode CSCDetId from various indexes and labels
@@ -403,7 +421,9 @@ public:
    *
    * This is the decimal integer ie*100000 + is*10000 + ir*1000 + ic*10 + il <br>
    * (ie=1-2, is=1-4, ir=1-4, ic=1-36, il=1-6) <br>
-   * Channels 1-16 in ME1A (is=1, ir=4) are reset to channels 65-80 of ME11.
+   * Channels 1-16 in ME1A (is=1, ir=4) are NOT reset to channels 65-80 of ME11.
+   * WARNING: This is now ADOPTED to unganged ME1a channels, 
+   *          which means we expect that the online conditions DB would adopt it too.
    */
   int dbIndex(const CSCDetId & id, int & channel);
 

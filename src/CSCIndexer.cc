@@ -128,6 +128,8 @@ CSCDetId CSCIndexer::detIdFromLayerIndex( IndexType ili ) const {
 
 std::pair<CSCDetId, CSCIndexer::IndexType>  CSCIndexer::detIdFromStripChannelIndex( LongIndexType isi ) const {
 
+  const LongIndexType lastnonme1a       = 252288; // channels with ME42 installed
+  const LongIndexType lastpluszme1a     = 262656; // last unganged ME1a +z channel = 252288 + 10368
   const LongIndexType lastnonme42 = 217728; // channels in 2008 installed chambers
   const LongIndexType lastplusznonme42 = 108864; // = 217728/2
   const LongIndexType firstme13  = 34561; // First channel of ME13
@@ -138,17 +140,21 @@ std::pair<CSCDetId, CSCIndexer::IndexType>  CSCIndexer::detIdFromStripChannelInd
   const IndexType firstme13layer  = 433; // = 72*6 + 1 (ME13 chambers are 72-108 in range 1-234)
   const IndexType lastme13layer   = 648; // = 108*6
 
-  // All chambers but ME13 have 80 channels
+  bool me1a = false;
+	
+  // Most chambers (except ME13 & ME1a) have 80 channels index width allocated
+  //   unganged ME1a have 48 channels
+  //   ME13 have 64 channels
   IndexType nchan = 80;
 
-  // Set endcap to +z. This should work for ME42 channels too, since we don't need to calculate its endcap explicitly.
+  // Set endcap to +z initially
   IndexType ie = 1;
 
   LongIndexType istart = 0;
   IndexType layerOffset = 0;
 
-  if ( isi <= lastnonme42 ) {	
-    // Chambers as of 2008 Installation
+  if ( isi <= lastnonme42 ) {
+    // Chambers as of 2008 Installation (ME11 keeps the same #of channels 80 allocated for it in the index)
 
     if ( isi > lastplusznonme42 ) {
       ie = 2;
@@ -165,25 +171,41 @@ std::pair<CSCDetId, CSCIndexer::IndexType>  CSCIndexer::detIdFromStripChannelInd
       nchan = 64;
     }
   }
-  else {
-     // ME42 chambers
+  else if ( isi <= lastnonme1a ) { // ME42 chambers
 
     istart = lastnonme42;
     layerOffset = lastnonme42layer;
+
+    // don't care about ie, as ME42 stratch of indices is uniform
+  }
+  else {   // Unganged ME1a channels
+    
+    me1a = true;
+    if (isi > lastpluszme1a) ie = 2;
+    istart = lastnonme1a; 
+    nchan = 48;
+    // layerOffset stays 0, as we want to map them onto ME1b's layer indices
   }
 
-   isi -= istart; // remove earlier group(s)
-   IndexType ichan = (isi-1)%nchan + 1;
-   IndexType ili = (isi-1)/nchan + 1;
-   ili += layerOffset; // add appropriate offset for earlier group(s)
-   if ( ie != 1 ) ili+= lastplusznonme42layer; // add offset to -z endcap; ME42 doesn't need this.
+  isi -= istart; // remove earlier group(s)
+  IndexType ichan = (isi-1)%nchan + 1;
+  IndexType ili = (isi-1)/nchan + 1;
+  ili += layerOffset; // add appropriate offset for earlier group(s)
+  if ( ie != 1 ) ili+= lastplusznonme42layer; // add offset to -z endcap; ME42 doesn't need this.
 	
-   return std::pair<CSCDetId, IndexType>(detIdFromLayerIndex(ili), ichan);
+  CSCDetId id = detIdFromLayerIndex(ili);
+
+  // For unganged ME1a we need to turn this ME11 detid into an ME1a one
+  if ( me1a ) id = CSCDetId( id.endcap(), 1, 4, id.chamber(), id.layer() );
+	
+  return std::make_pair(id, ichan);
 }
 
 
 std::pair<CSCDetId, CSCIndexer::IndexType>  CSCIndexer::detIdFromChipIndex( IndexType ici ) const {
 
+  const LongIndexType lastnonme1a       = 15768; // chips in chambers with ME42 installed
+  const LongIndexType lastpluszme1a     = 16416; // last unganged ME1a +z chip = 15768 + 648 = 16416
   const LongIndexType lastnonme42 = 13608; // chips in 2008 installed chambers
   const LongIndexType lastplusznonme42 = 6804; // = 13608/2
   const LongIndexType firstme13  = 2161; // First channel of ME13
@@ -194,7 +216,9 @@ std::pair<CSCDetId, CSCIndexer::IndexType>  CSCIndexer::detIdFromChipIndex( Inde
   const IndexType firstme13layer  = 433; // = 72*6 + 1 (ME13 chambers are 72-108 in range 1-234)
   const IndexType lastme13layer   = 648; // = 108*6
 
-  // All chambers but ME13 have 5 chips/layer
+  bool me1a = false;
+
+  // Most chambers (except ME13, ME1a) have 5 chips/layer
   IndexType nchipPerLayer = 5;
 
   // Set endcap to +z. This should work for ME42 channels too, since we don't need to calculate its endcap explicitly.
@@ -204,7 +228,7 @@ std::pair<CSCDetId, CSCIndexer::IndexType>  CSCIndexer::detIdFromChipIndex( Inde
   IndexType layerOffset = 0;
 
   if ( ici <= lastnonme42 ) {	
-    // Chambers as of 2008 Installation
+    // Chambers as of 2008 Installation (ME11 keeps the same #of chips 5 allocated for it in the index)
 
     if ( ici > lastplusznonme42 ) {
       ie = 2;
@@ -221,11 +245,20 @@ std::pair<CSCDetId, CSCIndexer::IndexType>  CSCIndexer::detIdFromChipIndex( Inde
       nchipPerLayer = 4;
     }
   }
-  else {
-     // ME42 chambers
+  else if ( ici <= lastnonme1a ) {  // ME42 chambers
 
     istart = lastnonme42;
     layerOffset = lastnonme42layer;
+    
+    // don't care about ie, as ME42 stratch of indices is uniform
+  }
+  else {   // Unganged ME1a channels
+    
+    me1a = true;
+    if (ici > lastpluszme1a) ie = 2;
+    istart = lastnonme1a; 
+    nchipPerLayer = 3;
+    // layerOffset stays 0, as we want to map them onto ME1b's layer indices
   }
 
    ici -= istart; // remove earlier group(s)
@@ -234,7 +267,12 @@ std::pair<CSCDetId, CSCIndexer::IndexType>  CSCIndexer::detIdFromChipIndex( Inde
    ili += layerOffset; // add appropriate offset for earlier group(s)
    if ( ie != 1 ) ili+= lastplusznonme42layer; // add offset to -z endcap; ME42 doesn't need this.
 	
-   return std::pair<CSCDetId, IndexType>(detIdFromLayerIndex(ili), ichip);
+   CSCDetId id = detIdFromLayerIndex(ili);
+   
+   // For unganged ME1a we need to turn this ME11 detid into an ME1a one
+   if ( me1a ) id = CSCDetId( id.endcap(), 1, 4, id.chamber(), id.layer() );
+	
+   return std::make_pair(id, ichip);
 }
 
 int CSCIndexer::dbIndex(const CSCDetId & id, int & channel)
@@ -245,11 +283,5 @@ int CSCIndexer::dbIndex(const CSCDetId & id, int & channel)
   int ch = id.chamber();
   int la = id.layer();
 
-  // The channels of ME1A are channels 65-80 of ME11
-  if(st == 1 && rg == 4)
-    {
-      rg = 1;
-      if(channel <= 16) channel += 64; // no trapping for any bizarreness
-    }
   return ec*100000 + st*10000 + rg*1000 + ch*10 + la;
 }
