@@ -21,6 +21,43 @@ void CSCIndexer::fillChamberLabel() const {
    }
 }
 
+
+CSCIndexer::IndexType CSCIndexer::hvSegmentIndex(IndexType is, IndexType ir, IndexType iwire ) const
+{
+  IndexType hvSegment = 1;   // There is only one HV segment in ME1/1
+
+  if (is > 2 && ir == 1)
+  {         // HV segments are the same in ME3/1 and ME4/1
+    if      ( iwire >= 33 && iwire <= 64 ) hvSegment = 2;
+    else if ( iwire >= 65 && iwire <= 96 ) hvSegment = 3;
+  }
+  else if (is > 1 && ir == 2)
+  {         // HV segments are the same in ME2/2, ME3/2, and ME4/2
+    if      ( iwire >= 17 && iwire <= 28 ) hvSegment = 2;
+    else if ( iwire >= 29 && iwire <= 40 ) hvSegment = 3;
+    else if ( iwire >= 41 && iwire <= 52 ) hvSegment = 4;
+    else if ( iwire >= 53 && iwire <= 64 ) hvSegment = 5;
+  }
+  else if (is == 1 && ir == 2)
+  {
+    if      ( iwire >= 25 && iwire <= 48 ) hvSegment = 2;
+    else if ( iwire >= 49 && iwire <= 64 ) hvSegment = 3;
+  }
+  else if (is == 1 && ir == 3)
+  {
+    if      ( iwire >= 13 && iwire <= 22 ) hvSegment = 2;
+    else if ( iwire >= 23 && iwire <= 32 ) hvSegment = 3;
+  }
+  else if (is == 2 && ir == 1)
+  {
+    if      ( iwire >= 45 && iwire <= 80 ) hvSegment = 2;
+    else if ( iwire >= 81 && iwire <= 112) hvSegment = 3;
+  }
+
+  return hvSegment;
+}
+
+
 CSCDetId CSCIndexer::detIdFromChamberIndex_OLD( IndexType ici ) const {
 
   // Will not work as is for ME42
@@ -274,6 +311,52 @@ std::pair<CSCDetId, CSCIndexer::IndexType>  CSCIndexer::detIdFromChipIndex( Inde
 	
    return std::make_pair(id, ichip);
 }
+
+
+CSCIndexer::GasGainTuple  CSCIndexer::detIdFromGasGainIndex( IndexType igg ) const
+{
+  const int nTypes = 22;
+  const IndexType typeStarts[nTypes] =
+    {1,  865,  1081, 4321, 6913, 8533, 13933, 15553, 20953, 22573, 23437, 23653, 26893, 29485, 31105, 36505, 38125, 43525, 45145, 50545, 55945, 56593};
+  //+1/1 +1/4g +1/2  +1/3  +2/1  +2/2  +3/1   +3/2   +4/1   -1/1   -1/4g  -1/2   -1/3   -2/1   -2/2   -3/1   -3/2   -4/1   +4/2   -4/2   +1/4   -1/4
+  // Note: +-1/4g mark the starts of the index regions for ganged me1a with single chip
+
+  const int endcaps[nTypes] =
+    {1,  1,    1,    1,    1,    1,    1,     1,     1,     2,     2,     2,     2,     2,     2,     2,     2,     2,     1,     2,     1,     2};
+  const int stations[nTypes] =
+    {1,  1,    1,    1,    2,    2,    3,     3,     4,     1,     1,     1,     1,     2,     2,     3,     3,     4,     4,     4,     1,     1};
+  const int rings[nTypes] =
+    {1,  4,    2,    3,    1,    2,    1,     2,     1,     1,     4,     2,     3,     1,     2,     1,     2,     1,     2,     2,     4,     4};
+
+  // determine chamber type
+  std::vector<IndexType> vTypeStarts(typeStarts, typeStarts + nTypes);
+  int type = int(upper_bound(vTypeStarts.begin(), vTypeStarts.end(), igg) -  vTypeStarts.begin()) - 1;
+
+  // determine factors for #HVsectors and #chips
+  int sectors_per_layer = sectorsPerLayer(stations[type], rings[type]);
+  int chips_per_layer = chipsPerLayer(stations[type], rings[type]);
+  if (type == 1 || type == 10) // handle the "ganged" regions separately
+  {
+    sectors_per_layer = 1;
+    chips_per_layer = 1;
+  }
+
+  IndexType igg_chamber_etc = igg - typeStarts[type] + 1;
+
+  IndexType igg_chamber_and_layer = (igg_chamber_etc - 1) / sectors_per_layer + 1;
+
+  int chamber = (igg_chamber_and_layer - 1) / 6 + 1;
+  int layer   = (igg_chamber_and_layer - 1) % 6 + 1;
+
+  IndexType igg_hvseg_etc         = (igg_chamber_etc - 1) % sectors_per_layer + 1;
+
+  IndexType hvsegment = (igg_hvseg_etc - 1) / chips_per_layer + 1;
+  IndexType chip      = (igg_hvseg_etc - 1) % chips_per_layer + 1;
+
+  CSCDetId id(endcaps[type], stations[type], rings[type], chamber, layer);
+  return boost::make_tuple(id, hvsegment, chip);
+}
+
 
 int CSCIndexer::dbIndex(const CSCDetId & id, int & channel)
 {
