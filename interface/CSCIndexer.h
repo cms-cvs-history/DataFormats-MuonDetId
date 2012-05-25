@@ -36,7 +36,7 @@
  * The strip list then appends
  * +z ME1a, -z ME1a <br>
  *
- * \warning This uses magic numbers galore!!
+ * \warning This intentionally has "magic numbers galore" which, supposedly, is for better performance.
  *
  * \warning EVERY LABEL COUNTS FROM ONE NOT ZERO.
  *
@@ -59,6 +59,12 @@ public:
                        IndexType, // HV segment
                        IndexType  // chip
                       > GasGainTuple;
+
+  static const IndexType MAX_CHAMBER_INDEX = 540;
+  static const IndexType MAX_LAYER_INDEX = 3240;
+  static const LongIndexType MAX_STRIP_CHANNEL_INDEX = 273024;
+  static const IndexType MAX_CHIP_INDEX = 17064;
+  static const IndexType MAX_GAS_GAIN_INDEX = 57240;
 
   CSCIndexer(){};
   ~CSCIndexer(){};
@@ -121,19 +127,30 @@ public:
    *          (result would be the same for is=1 and ir=1 or 4).
    */
   IndexType layerIndex(IndexType ie, IndexType is, IndexType ir, IndexType ic, IndexType il) const {
-    const IndexType layersInChamber = 6;
-    return (chamberIndex(ie,is,ir,ic) - 1 ) * layersInChamber + il;
+    return (chamberIndex(ie,is,ir,ic) - 1 ) * 6 + il;
   }
 
   /**
    * How many (physical hardware) rings are there in station is=1, 2, 3, 4 ?
    *
-   * WARNING <BR>
-   * - Includes ME42 so claims 2 rings in station 4.  <BR>
+   * WARNING:
    * - ME1 has only 3 physical rings (the hardware) not 4 (virtual ring 4 is used offline for ME1a).
+   * - Includes ME42 so claims 2 rings in station 4.
    */
   IndexType ringsInStation( IndexType is ) const {
     const IndexType nrings[5] = { 0,3,2,2,2 }; // rings per station
+    return nrings[is];
+  }
+
+  /**
+   * How many offline rings are there in station is=1, 2, 3, 4 ?
+   *
+   * WARNING:
+   * - ME1 has 4 rings in the offline notation (virtual ring 4 is used for ME1a).
+   * - Includes ME42 so claims 2 rings in station 4.
+   */
+  IndexType offlineRingsInStation( IndexType is ) const {
+    const IndexType nrings[5] = { 0,4,2,2,2 }; // rings per station
     return nrings[is];
   }
 
@@ -151,8 +168,11 @@ public:
    * Number of strip channels per layer in a chamber in ring ir of station is.
    *
    * Station label range 1-4, Ring label range 1-4.
-   * Works for ME1a input as is=1, ir=4
-   * WARNING: ME1a channels are considered to be unganged i.e. 48 not the standard 16.
+   * Works for ME1a input as is=1, ir=4.
+   *
+   * WARNING:
+   * - ME1a channels are considered to be unganged i.e. 48 not the standard 16.
+   * - ME1b keeps 80 channels for the indexing purposes, however channels 65-80 are ignored in the unganged case.
    */
   IndexType stripChannelsPerLayer( IndexType is, IndexType ir ) const {
     const IndexType nSCinC[16] = { 80,80,64,48,  80,80,0,0,  80,80,0,0,  80,80,0,0 };
@@ -213,12 +233,14 @@ public:
    * Station label range 1-4, Ring label range 1-3.
    *
    * Works for ME1a input as is=1, ir=4
-   * WARNING: ME1a channels are considered to be unganged and have their own 3 chips (ME1b has 4 chips).
-   *
    * Considers ME42 as standard 5 chip per layer chambers.
+   *
+   * WARNING:
+   * - ME1a channels are considered to be unganged and have their own 3 chips (ME1b has 4 chips).
+   * - ME1b keeps 5 chips for the indexing purposes, however indices for the chip #5 are ignored in the unganged case.
    */
   IndexType chipsPerLayer( IndexType is, IndexType ir ) const {
-    const IndexType nCinL[16] = { 4,5,4,3,  5,5,0,0,  5,5,0,0,  5,5,0,0 };
+    const IndexType nCinL[16] = { 5,5,4,3,  5,5,0,0,  5,5,0,0,  5,5,0,0 };
     return nCinL[(is-1)*4 + ir - 1];
   }
 
@@ -241,7 +263,6 @@ public:
      // Start of -z (ME1a) is 15768 + 1 + 648 = 16417
      const IndexType nStart[32] = {1,   1081, 2161, 15769,  3025, 3565, 0,0, 4645, 5185, 0,0, 6265, 13609,0,0,
 				   6805,7885, 8965, 16417,  9829, 10369,0,0, 11449,11989,0,0, 13069,14689,0,0 };
-                                   
      return  nStart[(ie-1)*16 + (is-1)*4 + ir - 1];
    }
 

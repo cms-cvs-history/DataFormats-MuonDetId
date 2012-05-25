@@ -315,41 +315,37 @@ std::pair<CSCDetId, CSCIndexer::IndexType>  CSCIndexer::detIdFromChipIndex( Inde
 
 CSCIndexer::GasGainTuple  CSCIndexer::detIdFromGasGainIndex( IndexType igg ) const
 {
-  const int nTypes = 22;
-  const IndexType typeStarts[nTypes] =
-    {1,  865,  1081, 4321, 6913, 8533, 13933, 15553, 20953, 22573, 23437, 23653, 26893, 29485, 31105, 36505, 38125, 43525, 45145, 50545, 55945, 56593};
-  //+1/1 +1/4g +1/2  +1/3  +2/1  +2/2  +3/1   +3/2   +4/1   -1/1   -1/4g  -1/2   -1/3   -2/1   -2/2   -3/1   -3/2   -4/1   +4/2   -4/2   +1/4   -1/4
-  // Note: +-1/4g mark the starts of the index regions for ganged me1a with single chip
+  const int n_types = 20;
+  const IndexType type_starts[n_types] =
+    {1,  1081, 4321, 6913, 8533, 13933, 15553, 20953, 22573, 23653, 26893, 29485, 31105, 36505, 38125, 43525, 45145, 50545, 55945, 56593};
+  //+1/1 +1/2  +1/3  +2/1  +2/2  +3/1   +3/2   +4/1   -1/1   -1/2   -1/3   -2/1   -2/2   -3/1   -3/2   -4/1   +4/2   -4/2   +1/4   -1/4
 
-  const int endcaps[nTypes] =
-    {1,  1,    1,    1,    1,    1,    1,     1,     1,     2,     2,     2,     2,     2,     2,     2,     2,     2,     1,     2,     1,     2};
-  const int stations[nTypes] =
-    {1,  1,    1,    1,    2,    2,    3,     3,     4,     1,     1,     1,     1,     2,     2,     3,     3,     4,     4,     4,     1,     1};
-  const int rings[nTypes] =
-    {1,  4,    2,    3,    1,    2,    1,     2,     1,     1,     4,     2,     3,     1,     2,     1,     2,     1,     2,     2,     4,     4};
+  const int endcaps[n_types] =
+    {1,  1,    1,    1,    1,    1,     1,     1,     2,     2,     2,     2,     2,     2,     2,     2,     1,     2,     1,     2};
+  const int stations[n_types] =
+    {1,  1,    1,    2,    2,    3,     3,     4,     1,     1,     1,     2,     2,     3,     3,     4,     4,     4,     1,     1};
+  const int rings[n_types] =
+    {1,  2,    3,    1,    2,    1,     2,     1,     1,     2,     3,     1,     2,     1,     2,     1,     2,     2,     4,     4};
 
   // determine chamber type
-  std::vector<IndexType> vTypeStarts(typeStarts, typeStarts + nTypes);
-  int type = int(upper_bound(vTypeStarts.begin(), vTypeStarts.end(), igg) -  vTypeStarts.begin()) - 1;
+  std::vector<IndexType> v_type_starts(type_starts, type_starts + n_types);
+  int type = int(std::upper_bound(v_type_starts.begin(), v_type_starts.end(), igg) -  v_type_starts.begin()) - 1;
 
   // determine factors for #HVsectors and #chips
   int sectors_per_layer = sectorsPerLayer(stations[type], rings[type]);
   int chips_per_layer = chipsPerLayer(stations[type], rings[type]);
-  if (type == 1 || type == 10) // handle the "ganged" regions separately
-  {
-    sectors_per_layer = 1;
-    chips_per_layer = 1;
-  }
 
-  IndexType igg_chamber_etc = igg - typeStarts[type] + 1;
+  IndexType igg_chamber_etc = igg - type_starts[type] + 1;
 
   IndexType igg_chamber_and_layer = (igg_chamber_etc - 1) / sectors_per_layer + 1;
 
+  // extract chamber & layer
   int chamber = (igg_chamber_and_layer - 1) / 6 + 1;
   int layer   = (igg_chamber_and_layer - 1) % 6 + 1;
 
   IndexType igg_hvseg_etc         = (igg_chamber_etc - 1) % sectors_per_layer + 1;
 
+  // extract HVsegment and chip numbers
   IndexType hvsegment = (igg_hvseg_etc - 1) / chips_per_layer + 1;
   IndexType chip      = (igg_hvseg_etc - 1) % chips_per_layer + 1;
 
